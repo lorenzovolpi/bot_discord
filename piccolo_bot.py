@@ -1,26 +1,65 @@
 import os
 import discord
+from bs4 import BeautifulSoup
+import lxml
+import requests
 import random
 from discord.ext import commands
 
 from dotenv import load_dotenv
 
 
+URL = "https://dragonball.fandom.com/wiki/"
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36"}
+
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
 intents = discord.Intents.default()
-intents.members = True
-intents.messages = True
+#intents.members = True
+#intents.messages = True
 
-bot = commands.Bot(command_prefix='!piccolo', intents=intents)
+bot = commands.Bot(command_prefix='!piccolo ', intents=intents)
 
 
 @bot.command(name='mysphere', help='Return a random number in range 1-7')
 async def mysphere(ctx):
     sphere_number = random.randint(1,7)
     await ctx.send("You have found the Dragonball N° {}!!".format(sphere_number))
+
+
+@bot.command(name='hi', help='Return a random number in range 1-7')
+async def hi(ctx):
+    await ctx.send("Hi! I'm the bot!")
+
+
+async def get_info(name:str):
+    _name = str(name[0]).upper() + name[1:].lower()
+    page = requests.get(URL+_name, headers=headers)
+
+    soup = BeautifulSoup(page.content, "lxml")
+
+    src = soup.find(id="mw-content-text") \
+            .find("aside") \
+            .find("figure") \
+            .find("img")["src"]
+
+    return src, _name
+    
+@bot.command(name='whois', help='Return a random number in range 1-7')
+async def whois(ctx, name):
+    src, _name = await get_info(name)
+
+    reply = "Here's a pic of " + _name
+    image = requests.get(src, headers=headers)
+    with open(_name + ".jpg", "wb+") as img:
+        img.write(image.content)
+        img.seek(0)
+        await ctx.send(reply, file=discord.File(img))
+
+
+
 
 
 @bot.event
